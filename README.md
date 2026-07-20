@@ -1,66 +1,72 @@
-# n8n Vincode - Local & Production Setup
+# n8n Vincode - Production & Local Setup
 
-Dự án này cung cấp cấu hình Docker chuẩn để chạy [n8n](https://n8n.io/) (Nền tảng tự động hóa Workflow) ở cả môi trường Local và dễ dàng public lên Internet.
+Dự án này cung cấp cấu hình Docker chuẩn để chạy [n8n](https://n8n.io/) (Nền tảng tự động hóa Workflow) ở cả môi trường Local và hoàn chỉnh cho **Production** (Có sẵn Nginx làm Reverse Proxy và tự động cấp phát SSL miễn phí từ Let's Encrypt).
 
-## 🚀 Hướng dẫn chạy Local
+## 🚀 Tính năng nổi bật
+- **n8n** chạy ngầm ổn định qua Docker.
+- **Tự động gia hạn SSL (HTTPS)** bằng Let's Encrypt Companion (Không cần cấu hình tay).
+- **Nginx Reverse Proxy** tự động nhận diện traffic và forward về đúng port của n8n.
+- Giữ nguyên Port mapping `7100` để có thể test độc lập nếu cần.
+
+---
+
+## 🌍 Hướng dẫn Deploy lên Production (VPS)
+
+Cấu hình này đã được thiết kế sẵn sàng 100% để chạy thật ở domain: **n8n.vincode.xyz**
 
 ### 1. Yêu cầu hệ thống
-- Đã cài đặt [Docker](https://docs.docker.com/get-docker/) và Docker Compose (hoặc Docker Desktop).
-- Đảm bảo Docker đang chạy trên máy của bạn.
+- Server/VPS đã cài đặt [Docker](https://docs.docker.com/get-docker/) và Docker Compose.
+- Đã trỏ tên miền (Record A) `n8n.vincode.xyz` về IP của Server VPS này.
 
 ### 2. Thiết lập môi trường
-Dự án đã có sẵn file `.env.example`, nếu chưa có file `.env`, bạn hãy tạo bằng lệnh sau:
+Clone mã nguồn về VPS và vào thư mục dự án:
+```bash
+git clone https://github.com/phamkhoa18/n8n_vincode.git
+cd n8n_vincode
+```
+
+Copy file `.env.example` thành file `.env` (nếu chưa có):
 ```bash
 cp .env.example .env
 ```
-File `.env` mặc định đã được cấu hình chạy ở cổng **7100**. Bạn có thể tuỳ chỉnh nếu muốn.
+File `.env` mặc định đã được cấu hình chuẩn:
+- `DOMAIN_NAME=vincode.xyz`
+- `SUBDOMAIN=n8n`
+- `SSL_EMAIL=admin@vincode.xyz` (Hãy sửa thành email thật của bạn nếu muốn).
+- `N8N_PORT=7100`
 
-### 3. Khởi động n8n
+### 3. Khởi động hệ thống
 Mở terminal tại thư mục này và chạy lệnh sau:
 ```bash
 docker compose up -d
 ```
 
 ### 4. Sử dụng
-Truy cập vào trình duyệt với đường dẫn:
-👉 **[http://localhost:7100](http://localhost:7100)**
+- Let's Encrypt sẽ mất khoảng 1-2 phút ở lần đầu tiên để verify và cấp phát SSL.
+- Truy cập vào trình duyệt với đường dẫn an toàn:
+👉 **[https://n8n.vincode.xyz](https://n8n.vincode.xyz)**
 
 Lần đầu tiên truy cập, n8n sẽ yêu cầu bạn tạo tài khoản Admin.
 
 ---
 
-## 🌍 Hướng dẫn Public lên Internet (Deploy lên VPS)
+## 🛠 Hướng dẫn chạy Local (Để Test)
 
-Cấu hình hiện tại đã được thiết kế sẵn sàng cho việc deploy lên Production.
+Nếu bạn chỉ muốn chạy trên máy tính cá nhân để test (không có domain thật):
+1. Đảm bảo Docker Desktop đang chạy.
+2. Chạy lệnh: `docker compose up -d`
+3. Lúc này SSL sẽ báo lỗi vì Let's Encrypt không verify được domain localhost, nhưng n8n vẫn sẽ chạy.
+4. Bạn có thể truy cập qua: **[http://localhost:7100](http://localhost:7100)** 
 
-1. **Chuẩn bị server/VPS**: Cài đặt Docker và Docker Compose trên Server.
-2. **Clone source code**: Đưa toàn bộ thư mục này lên Server.
-3. **Cấu hình Domain**:
-   - Trỏ tên miền (ví dụ: `n8n.yourdomain.com`) về IP của Server.
-   - Sửa file `.env` trên server:
-     ```env
-     DOMAIN_NAME=yourdomain.com
-     SUBDOMAIN=n8n
-     ```
-   - *Lưu ý*: Trong môi trường thực tế, bạn nên sử dụng thêm một Reverse Proxy (như Nginx, Traefik, hoặc Caddy) để bọc cấu hình SSL (HTTPS) cho n8n.
-4. **Khởi động**:
-   ```bash
-   docker compose up -d
-   ```
-
-## 🛠 Các lệnh quản lý Docker thường dùng
+## ⚙️ Các lệnh quản lý Docker thường dùng
 
 - **Xem log hệ thống n8n**:
   ```bash
-  docker compose logs -f
+  docker compose logs -f n8n
   ```
-- **Dừng n8n**:
+- **Dừng hệ thống**:
   ```bash
   docker compose down
-  ```
-- **Khởi động lại n8n**:
-  ```bash
-  docker compose restart
   ```
 - **Xóa toàn bộ data (CẢNH BÁO)**:
   ```bash

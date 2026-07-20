@@ -2,19 +2,69 @@ version: '3.8'
 
 volumes:
   n8n_data:
+  certs:
+  vhost:
+  html:
+
+networks:
+  n8n_network:
 
 services:
+  # Nginx Reverse Proxy
+  nginx-proxy:
+    image: nginxproxy/nginx-proxy:alpine
+    container_name: nginx-proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - certs:/etc/nginx/certs
+      - vhost:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    networks:
+      - n8n_network
+
+  # Let's Encrypt (SSL Free) Companion
+  acme-companion:
+    image: nginxproxy/acme-companion
+    container_name: acme-companion
+    restart: always
+    volumes_from:
+      - nginx-proxy
+    volumes:
+      - certs:/etc/nginx/certs:rw
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - DEFAULT_EMAIL=${SSL_EMAIL}
+    networks:
+      - n8n_network
+    depends_on:
+      - nginx-proxy
+
+  # n8n Service
   n8n:
     image: docker.n8n.io/n8nio/n8n
+    container_name: n8n
     restart: always
     ports:
       - "${N8N_PORT:-7100}:5678"
     environment:
-      - N8N_HOST=${SUBDOMAIN:-localhost}
+      # N8N Config
+      - N8N_HOST=${SUBDOMAIN}.${DOMAIN_NAME}
       - N8N_PORT=5678
-      - N8N_PROTOCOL=http
+      - N8N_PROTOCOL=https
       - NODE_ENV=production
-      - WEBHOOK_URL=http://${SUBDOMAIN:-localhost}:${N8N_PORT:-7100}/
+      - WEBHOOK_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}/
       - GENERIC_TIMEZONE=${GENERIC_TIMEZONE:-Asia/Ho_Chi_Minh}
+      
+      # Nginx & SSL Config
+      - VIRTUAL_HOST=${SUBDOMAIN}.${DOMAIN_NAME}
+      - VIRTUAL_PORT=5678
+      - LETSENCRYPT_HOST=${SUBDOMAIN}.${DOMAIN_NAME}
+      - LETSENCRYPT_EMAIL=${SSL_EMAIL}
     volumes:
       - n8n_data:/home/node/.n8n
+    networks:
+      - n8n_network
