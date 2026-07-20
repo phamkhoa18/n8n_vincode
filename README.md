@@ -1,62 +1,46 @@
-# n8n Vincode - Production & Local Setup
+# n8n Vincode - Setup với Nginx có sẵn trên Host
 
-Dự án này cung cấp cấu hình Docker chuẩn để chạy [n8n](https://n8n.io/) (Nền tảng tự động hóa Workflow) ở cả môi trường Local và hoàn chỉnh cho **Production** (Có sẵn Nginx làm Reverse Proxy và tự động cấp phát SSL miễn phí từ Let's Encrypt).
+Dự án này cung cấp cấu hình Docker chạy **n8n** độc lập và hướng dẫn proxy qua Nginx đã cài đặt sẵn trên máy chủ của bạn (VPS).
 
-## 🚀 Tính năng nổi bật
-- **n8n** chạy ngầm ổn định qua Docker.
-- **Tự động gia hạn SSL (HTTPS)** bằng Let's Encrypt Companion (Không cần cấu hình tay).
-- **Nginx Reverse Proxy** tự động nhận diện traffic và forward về đúng port của n8n.
-- Giữ nguyên Port mapping `7100` để có thể test độc lập nếu cần.
+Vì máy chủ của bạn đã có Nginx chạy ở port 80/443 phục vụ các web khác, chúng ta sẽ chỉ chạy n8n trên port `7100` (Localhost) và dùng Nginx của máy chủ để trỏ domain `n8n.vincode.xyz` về port `7100` này.
 
----
+## 🚀 Hướng dẫn Deploy lên VPS
 
-## 🌍 Hướng dẫn Deploy lên Production (VPS)
-
-Cấu hình này đã được thiết kế sẵn sàng 100% để chạy thật ở domain: **n8n.vincode.xyz**
-
-### 1. Yêu cầu hệ thống
-- Server/VPS đã cài đặt [Docker](https://docs.docker.com/get-docker/) và Docker Compose.
-- Đã trỏ tên miền (Record A) `n8n.vincode.xyz` về IP của Server VPS này.
-
-### 2. Thiết lập môi trường
-Clone mã nguồn về VPS và vào thư mục dự án:
-```bash
-git clone https://github.com/phamkhoa18/n8n_vincode.git
-cd n8n_vincode
-```
-
-Copy file `.env.example` thành file `.env` (nếu chưa có):
-```bash
-cp .env.example .env
-```
-File `.env` mặc định đã được cấu hình chuẩn:
-- `DOMAIN_NAME=vincode.xyz`
-- `SUBDOMAIN=n8n`
-- `SSL_EMAIL=admin@vincode.xyz` (Hãy sửa thành email thật của bạn nếu muốn).
-- `N8N_PORT=7100`
-
-### 3. Khởi động hệ thống
-Mở terminal tại thư mục này và chạy lệnh sau:
+### 1. Khởi động n8n bằng Docker
+Vào thư mục dự án trên VPS và chạy lệnh:
 ```bash
 docker compose up -d
 ```
+Lúc này n8n đã chạy ngầm và lắng nghe ở địa chỉ `127.0.0.1:7100`. Nó hoàn toàn không đụng chạm đến port 80/443 của bạn.
 
-### 4. Sử dụng
-- Let's Encrypt sẽ mất khoảng 1-2 phút ở lần đầu tiên để verify và cấp phát SSL.
-- Truy cập vào trình duyệt với đường dẫn an toàn:
-👉 **[https://n8n.vincode.xyz](https://n8n.vincode.xyz)**
+### 2. Cấu hình Nginx trên Host
+Trong dự án đã có sẵn file mẫu `nginx.conf.example`. Bạn hãy copy nội dung file này và tạo một file cấu hình Nginx mới trên VPS của bạn:
 
-Lần đầu tiên truy cập, n8n sẽ yêu cầu bạn tạo tài khoản Admin.
+1. Tạo file cấu hình:
+   ```bash
+   sudo nano /etc/nginx/sites-available/n8n.vincode.xyz
+   ```
+2. Dán nội dung từ file `nginx.conf.example` vào.
+3. Kích hoạt file cấu hình:
+   ```bash
+   sudo ln -s /etc/nginx/sites-available/n8n.vincode.xyz /etc/nginx/sites-enabled/
+   ```
+4. Kiểm tra cấu hình và khởi động lại Nginx:
+   ```bash
+   sudo nginx -t
+   sudo systemctl reload nginx
+   ```
+
+### 3. Cài đặt SSL tự động bằng Certbot (Let's Encrypt)
+Vì Nginx nằm trên máy thật, bạn sẽ dùng `certbot` trực tiếp trên máy chủ để cài SSL cho n8n:
+```bash
+sudo certbot --nginx -d n8n.vincode.xyz -m phamkhoa3092003@gmail.com --agree-tos --redirect
+```
+Certbot sẽ tự động sửa file Nginx của bạn, thêm SSL và tự động chuyển hướng HTTP sang HTTPS.
+
+Sau bước này, bạn có thể truy cập ngay vào: **[https://n8n.vincode.xyz](https://n8n.vincode.xyz)**
 
 ---
-
-## 🛠 Hướng dẫn chạy Local (Để Test)
-
-Nếu bạn chỉ muốn chạy trên máy tính cá nhân để test (không có domain thật):
-1. Đảm bảo Docker Desktop đang chạy.
-2. Chạy lệnh: `docker compose up -d`
-3. Lúc này SSL sẽ báo lỗi vì Let's Encrypt không verify được domain localhost, nhưng n8n vẫn sẽ chạy.
-4. Bạn có thể truy cập qua: **[http://localhost:7100](http://localhost:7100)** 
 
 ## ⚙️ Các lệnh quản lý Docker thường dùng
 
